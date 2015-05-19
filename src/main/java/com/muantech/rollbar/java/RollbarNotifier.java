@@ -1,5 +1,9 @@
 package com.muantech.rollbar.java;
 
+import org.apache.logging.log4j.status.StatusLogger;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
@@ -9,10 +13,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.log4j.helpers.LogLog;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 public class RollbarNotifier {
 
@@ -90,7 +90,7 @@ public class RollbarNotifier {
                     JSONObject payload = BUILDER.build(level.toString(), message, throwable, context);
                     postJson(payload);
                 } catch (Throwable e) {
-                    LogLog.error("There was an error notifying the error.", e);
+                    StatusLogger.getLogger().error("There was an error notifying the error.", e);
                 }
             }
 
@@ -125,7 +125,7 @@ public class RollbarNotifier {
         try {
             url = new URL(urlString);
         } catch (MalformedURLException e) {
-            LogLog.error("Error parsing the notifiying URL", e);
+            StatusLogger.getLogger().error("Error parsing the notifiying URL", e);
             throw new IllegalArgumentException();
         }
         return url;

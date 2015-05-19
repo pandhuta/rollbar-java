@@ -15,7 +15,7 @@ import java.util.Map.Entry;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
-import org.apache.log4j.helpers.LogLog;
+import org.apache.logging.log4j.status.StatusLogger;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -117,7 +117,7 @@ public class NotifyBuilder {
                 throwable = throwable.getCause();
             } while (throwable != null);
 
-            body.put("trace_chain", new JSONArray(traces));
+            body.put("trace_chain", new JSONArray(traces.toArray()));
         }
 
         if (original == null && message != null) {
@@ -139,75 +139,34 @@ public class NotifyBuilder {
 
         // url: full URL where this event occurred
         String url = getValue("url", context, null);
-        if (url == null && httpRequest != null) url = httpRequest.getRequestURI();
         if (url != null) requestData.put("url", url);
 
         // method: the request method
         String method = getValue("method", context, null);
-        if (method == null && httpRequest != null) method = httpRequest.getMethod();
         if (method != null) requestData.put("method", method);
 
         // headers
-        Map<String, String> headers = (Map<String, String>) context.get("headers");
-        if (headers == null && httpRequest != null) {
-            headers = new HashMap<String, String>();
-
-            Enumeration<String> headerNames = httpRequest.getHeaderNames();
-            while (headerNames.hasMoreElements()) {
-                String headerName = headerNames.nextElement();
-                headers.put(headerName, httpRequest.getHeader(headerName));
-            }
-        }
-        if (headers != null) {
-            JSONObject headersData = new JSONObject();
-            for (Entry<String, String> entry : headers.entrySet()) {
-                headersData.put(entry.getKey(), entry.getValue());
-            }
-            if (headersData.length() > 0) requestData.put("headers", headersData);
-        }
+        String headersData = getValue("headers", context, null);
+        if (headersData != null && !headersData.isEmpty()) requestData.put("headers", new JSONObject(headersData));
 
         // params
-        Map<String, String> params = (Map<String, String>) context.get("params");
-        if (params == null && httpRequest != null) params = httpRequest.getParameterMap();
-        if (params != null) {
-            JSONObject paramsData = new JSONObject();
-            for (Entry<String, String> entry : params.entrySet()) {
-                paramsData.put(entry.getKey(), entry.getValue());
-            }
-            if (paramsData.length() > 0) {
-                String key = method != null ? (method.equalsIgnoreCase("post") ? "POST" : "GET") : "parameters";
-                requestData.put(key, paramsData);
-            }
-        }
+        String paramsData = getValue("params", context, null);
+        if(paramsData != null && !paramsData.isEmpty()) requestData.put("params", new JSONObject(paramsData));
 
         // query string
-        String query = (String) context.get("query");
-        if (query == null && httpRequest != null) query = httpRequest.getQueryString();
+        String query = getValue("query", context, null);
         if (query != null) requestData.put("query_string", query);
 
         // user ip
-        String userIP = (String) context.get("user-ip");
-        if (userIP == null && httpRequest != null) userIP = httpRequest.getRemoteAddr();
+        String userIP = getValue("user-ip", context, null);
         if (userIP != null) requestData.put("user_ip", userIP);
 
         // sessionId
-        String sessionId = null;
-        Object sessionObj = context.get("session");
-        if (sessionObj instanceof HttpSession) {
-            sessionId = ((HttpSession) sessionObj).getId();
-        } else if (sessionObj instanceof String) {
-            sessionId = (String) sessionObj;
-        }
-        if (sessionId == null && httpRequest != null) {
-            HttpSession session = httpRequest.getSession(false);
-            if (session != null) sessionId = session.getId();
-
-        }
+        String sessionId = getValue("sessionId", context, null);
         if (sessionId != null) requestData.put("session", sessionId);
 
         // protocol
-        String protocol = (String) context.get("protocol");
-        if (protocol == null && httpRequest != null) protocol = httpRequest.getProtocol();
+        String protocol = getValue("protocol", context, null);
         if (protocol != null) requestData.put("protocol", protocol);
 
         // requestId
@@ -376,7 +335,7 @@ public class NotifyBuilder {
 
             trace.put("raw", baos.toString("UTF-8"));
         } catch (Exception e) {
-            LogLog.error("Exception printing stack trace.", e);
+            StatusLogger.getLogger().error("Exception printing stack trace.", e);
         }
 
         JSONObject exceptionData = new JSONObject();
